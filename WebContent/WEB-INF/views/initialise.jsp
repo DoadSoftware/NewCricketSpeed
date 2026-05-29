@@ -40,6 +40,25 @@
 				      </select>
 				    </div>
 				  </div>
+				  <div class="form-group row row-bottom-margin ml-2" style="margin-bottom:5px;">
+					    <label for="Category"
+					        class="col-sm-3 col-form-label text-left">
+					        Category
+					    </label>
+					
+					    <div class="col-sm-6 col-md-6">
+					        <select id="Category"
+							        name="Category"
+							        class="browser-default custom-select custom-select-sm"
+							        onchange="processCricketProcedures('GET-CATEGORY-DATA')">
+					
+					            <option value=" "> </option>
+					            <option value="MEN">Men</option>
+					            <option value="WOMEN">Women</option>
+					
+					        </select>
+					    </div>
+					</div>
 				  <div class="form-group row row-bottom-margin ml-2" style="margin-bottom:0.8px;">
 				    <label for="select_cricket_matches" class="col-sm-4 col-form-label text-left">Select Cricket Match </label>
 				    <div class="col-sm-6 col-md-6">

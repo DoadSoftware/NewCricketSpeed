@@ -3,6 +3,10 @@ package com.cricket.controller;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
@@ -17,6 +21,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.SessionAttributes;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 import com.cricket.config.DataSourceConfig;
+import com.cricket.config.DatabaseContextHolder;
 import com.cricket.model.BatSpeed;
 import com.cricket.model.Configuration;
 import com.cricket.model.Match;
@@ -40,21 +45,23 @@ public class IndexController
 	public ObjectMapper objectMapper = new ObjectMapper();
 	public BatSpeed session_bat_speed;
 	public MatchAllData current_match = new MatchAllData();
+	public static String basePath = "";
 	
 	@RequestMapping(value = {"/"}, method={RequestMethod.GET,RequestMethod.POST}) 
 	public String initialisePage(ModelMap model,
 		@ModelAttribute("session_speed") Speed session_speed,
-		@ModelAttribute("session_configuration") Configuration session_configuration) throws JAXBException
+		@ModelAttribute("session_configuration") Configuration session_configuration,
+		@RequestParam(value = "Category", required = false, defaultValue = "") String Category) throws JAXBException
 	{
 		if(new File(CricketUtil.CRICKET_DIRECTORY + CricketUtil.CONFIGURATIONS_DIRECTORY + CricketUtil.SPEED_XML).exists()) {
 			session_configuration = (Configuration)JAXBContext.newInstance(Configuration.class).createUnmarshaller().unmarshal(
-				new File(CricketUtil.CRICKET_DIRECTORY + CricketUtil.CONFIGURATIONS_DIRECTORY + CricketUtil.SPEED_XML));
+				new File(CricketUtil.CRICKET_DIRECTORY  + CricketUtil.CONFIGURATIONS_DIRECTORY + CricketUtil.SPEED_XML));
 		} else {
 			session_configuration = new Configuration();
 			JAXBContext.newInstance(Configuration.class).createMarshaller().marshal(session_configuration, 
-				new File(CricketUtil.CRICKET_DIRECTORY + CricketUtil.CONFIGURATIONS_DIRECTORY + CricketUtil.SPEED_XML));
+				new File(basePath+ CricketUtil.CONFIGURATIONS_DIRECTORY + CricketUtil.SPEED_XML));
 		}
-		model.addAttribute("match_files", new File(CricketUtil.CRICKET_DIRECTORY + CricketUtil.MATCHES_DIRECTORY).listFiles(new FileFilter() {
+		model.addAttribute("match_files", new File(basePath + CricketUtil.MATCHES_DIRECTORY).listFiles(new FileFilter() {
 			@Override
 		    public boolean accept(File pathname) {
 		        String name = pathname.getName().toLowerCase();
@@ -72,20 +79,28 @@ public class IndexController
 	public String outputPage(ModelMap model,
 		@RequestParam(value = "select_cricket_matches", required = false, defaultValue = "") String selectedMatch,
 		@ModelAttribute("session_speed") Speed session_speed,
-		@ModelAttribute("session_configuration") Configuration session_configuration) 
+		@ModelAttribute("session_configuration") Configuration session_configuration, 
+	 @RequestParam(value = "Category", required = false, defaultValue = "") String Category)
 			throws StreamReadException, DatabindException, IOException
 	{
+		if (Category.equalsIgnoreCase("men")) {
+	    	basePath = "C:\\Sports\\CricketMen\\";
+	    	dataSourceConfig.switchDatabase(basePath);
+	    } else if (Category.equalsIgnoreCase("women")) {
+	    	basePath = "C:\\Sports\\CricketWomen\\";
+	    	dataSourceConfig.switchDatabase(basePath);
+	    }
 		if(current_match.getMatch() == null) {
 			current_match.setMatch(new Match());
 			current_match.getMatch().setMatchFileName(selectedMatch);
 		}
-		if(new File(CricketUtil.CRICKET_DIRECTORY + CricketUtil.SETUP_DIRECTORY + selectedMatch).exists()) 
+		if(new File(basePath + CricketUtil.SETUP_DIRECTORY + selectedMatch).exists()) 
 		{
-			current_match.setSetup(objectMapper.readValue(new File(CricketUtil.CRICKET_DIRECTORY + CricketUtil.SETUP_DIRECTORY + selectedMatch), Setup.class));
+			current_match.setSetup(objectMapper.readValue(new File(basePath + CricketUtil.SETUP_DIRECTORY + selectedMatch), Setup.class));
 		}
-		if(new File(CricketUtil.CRICKET_DIRECTORY + CricketUtil.MATCHES_DIRECTORY + selectedMatch).exists()) 
+		if(new File(basePath + CricketUtil.MATCHES_DIRECTORY + selectedMatch).exists()) 
 		{
-			current_match.setMatch(objectMapper.readValue(new File(CricketUtil.CRICKET_DIRECTORY + CricketUtil.MATCHES_DIRECTORY + selectedMatch), Match.class));
+			current_match.setMatch(objectMapper.readValue(new File(basePath + CricketUtil.MATCHES_DIRECTORY + selectedMatch), Match.class));
 		}
 		model.addAttribute("session_speed",session_speed);
 		model.addAttribute("session_configuration",session_configuration);
@@ -101,6 +116,15 @@ public class IndexController
 		for (Entry<String, String[]> entry : request.getParameterMap().entrySet()) {
 			if(entry.getKey().equalsIgnoreCase("select_broadcaster")) {
 				session_configuration.setBroadcaster(entry.getValue()[0]);
+			}else if(entry.getKey().equalsIgnoreCase("select_category")) {
+			    String category = entry.getValue()[0];
+			    if (category.equalsIgnoreCase("men")) {
+			    	basePath = "C:\\Sports\\CricketMen\\";
+			    	dataSourceConfig.switchDatabase(basePath);
+			    } else if (category.equalsIgnoreCase("women")) {
+			    	basePath = "C:\\Sports\\CricketWomen\\";
+			    	dataSourceConfig.switchDatabase(basePath);
+			    }
 			}else if(entry.getKey().equalsIgnoreCase("speed_directory_path")) {
 				session_configuration.setPrimaryIpAddress(entry.getValue()[0]);
 	        	if(!session_configuration.getPrimaryIpAddress().substring(
@@ -125,7 +149,7 @@ public class IndexController
 
 	}
 	
-	@RequestMapping(value = {"/processCricketProcedures"}, method={RequestMethod.GET,RequestMethod.POST})    
+	@RequestMapping(value = {"/processCricketProcedures.html"}, method={RequestMethod.GET,RequestMethod.POST})    
 	public @ResponseBody String processCricketProcedures(
 			@RequestParam(value = "whatToProcess", required = false, defaultValue = "") String whatToProcess,
 			@RequestParam(value = "valueToProcess", required = false, defaultValue = "") String valueToProcess,
@@ -142,8 +166,32 @@ public class IndexController
 				session_configuration.getSecondaryFilename(),session_bat_speed);
 			return JSONObject.fromObject(session_bat_speed).toString();
 		}
-		
+		System.out.println("whatToProcess - " + whatToProcess + " | valueToProcess - " + valueToProcess);
 		switch (whatToProcess.toUpperCase()) {
+		case "GET-CATEGORY-DATA":
+		    String category = valueToProcess.trim().toLowerCase(); // "men" or "women"
+
+		    File matchDir;
+		    if (category.equalsIgnoreCase("men")) {
+		        matchDir = new File("C:\\Sports\\CricketMen\\Matches\\");
+		    } else if (category.equalsIgnoreCase("women")) {
+		        matchDir = new File("C:\\Sports\\CricketWomen\\Matches\\");
+		    } else {
+		        matchDir = new File(CricketUtil.CRICKET_SERVER_DIRECTORY + CricketUtil.MATCHES_DIRECTORY);
+		    }
+
+		    File[] files = matchDir.listFiles(f -> f.isFile() && f.getName().toLowerCase().endsWith(".json"));
+		    List<String> matchNames = new ArrayList<>();
+		    if (files != null) {
+		        for (File f : files) {
+		            matchNames.add(f.getName());
+		        }
+		    }
+
+		    Map<String, Object> response = new HashMap<>();
+		    response.put("configuration", session_configuration);
+		    response.put("matchFiles", matchNames);
+		    return objectMapper.writeValueAsString(response);
 		case "SPEED":
 			
 			if(session_speed == null) {

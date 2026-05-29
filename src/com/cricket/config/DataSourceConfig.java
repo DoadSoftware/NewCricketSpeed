@@ -1,10 +1,15 @@
 package com.cricket.config;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import javax.sql.DataSource;
 import org.hibernate.SessionFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.orm.hibernate5.HibernateTransactionManager;
 import org.springframework.orm.hibernate5.LocalSessionFactoryBean;
@@ -12,22 +17,44 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 import com.cricket.util.CricketUtil;
 
 @Configuration
+@PropertySource("classpath:db.properties")
 @EnableTransactionManagement
 public class DataSourceConfig {
 
     private DriverManagerDataSource dataSource;
     private LocalSessionFactoryBean sessionFactory;
+    private static final String PROPERTY_NAME_DATABASE_DRIVER = "hibernate.connection.driver_class";
+    private static final String PROPERTY_NAME_DATABASE_URL = "hibernate.connection.local.url";
+    private static final String PROPERTY_NAME_MEN_DATABASE_URL = "hibernate.connection.men.url";
+    private static final String PROPERTY_NAME_WOMEN_DATABASE_URL = "hibernate.connection.women.url";
 
+    @Autowired
+    private Environment env;
+    
     @Bean
     public DataSource dataSource() {
+        dataSource = new DriverManagerDataSource();
+        dataSource.setDriverClassName(env.getRequiredProperty(PROPERTY_NAME_DATABASE_DRIVER));
+        dataSource.setUrl(env.getRequiredProperty(PROPERTY_NAME_DATABASE_URL));
+        
+        DriverManagerDataSource men = new DriverManagerDataSource();
+        men.setDriverClassName(env.getRequiredProperty(PROPERTY_NAME_DATABASE_DRIVER));
+        men.setUrl(env.getRequiredProperty(PROPERTY_NAME_MEN_DATABASE_URL));
+        
+        DriverManagerDataSource women = new DriverManagerDataSource();
+        women.setDriverClassName(env.getRequiredProperty(PROPERTY_NAME_DATABASE_DRIVER));
+        women.setUrl(env.getRequiredProperty(PROPERTY_NAME_WOMEN_DATABASE_URL));
+        
+        Map<Object, Object> targetDataSources = new HashMap<>();
+        targetDataSources.put("LOCAL", dataSource);
+        targetDataSources.put("MEN", men);
+        targetDataSources.put("WOMEN", women);
 
-        if (dataSource == null) {
-            dataSource = new DriverManagerDataSource();
-            dataSource.setDriverClassName("net.ucanaccess.jdbc.UcanaccessDriver");
-            dataSource.setUrl("jdbc:ucanaccess://" + CricketUtil.CRICKET_DIRECTORY 
-            	+ CricketUtil.DATABASE_DIRECTORY + CricketUtil.CRICKET_TEAMS_MDB);
-        }
-        return dataSource;
+        RoutingDataSource routingDataSource = new RoutingDataSource();
+        routingDataSource.setTargetDataSources(targetDataSources);
+        routingDataSource.setDefaultTargetDataSource(dataSource);
+
+        return routingDataSource;
     }
 
     @Bean
