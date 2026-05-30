@@ -17,34 +17,27 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 import com.cricket.util.CricketUtil;
 
 @Configuration
-@PropertySource("classpath:db.properties")
 @EnableTransactionManagement
 public class DataSourceConfig {
 
     private DriverManagerDataSource dataSource;
-    private LocalSessionFactoryBean sessionFactory;
-    private static final String PROPERTY_NAME_DATABASE_DRIVER = "hibernate.connection.driver_class";
-    private static final String PROPERTY_NAME_DATABASE_URL = "hibernate.connection.local.url";
-    private static final String PROPERTY_NAME_MEN_DATABASE_URL = "hibernate.connection.men.url";
-    private static final String PROPERTY_NAME_WOMEN_DATABASE_URL = "hibernate.connection.women.url";
 
-    @Autowired
-    private Environment env;
     
     @Bean
     public DataSource dataSource() {
+
         dataSource = new DriverManagerDataSource();
-        dataSource.setDriverClassName(env.getRequiredProperty(PROPERTY_NAME_DATABASE_DRIVER));
-        dataSource.setUrl(env.getRequiredProperty(PROPERTY_NAME_DATABASE_URL));
-        
+        dataSource.setDriverClassName("net.ucanaccess.jdbc.UcanaccessDriver");
+        dataSource.setUrl("jdbc:ucanaccess://C:/Sports/Cricket/Database/CricketTeams.mdb");
+
         DriverManagerDataSource men = new DriverManagerDataSource();
-        men.setDriverClassName(env.getRequiredProperty(PROPERTY_NAME_DATABASE_DRIVER));
-        men.setUrl(env.getRequiredProperty(PROPERTY_NAME_MEN_DATABASE_URL));
-        
+        men.setDriverClassName("net.ucanaccess.jdbc.UcanaccessDriver");
+        men.setUrl("jdbc:ucanaccess://C:/Sports/CricketMen/Database/CricketTeams.mdb");
+
         DriverManagerDataSource women = new DriverManagerDataSource();
-        women.setDriverClassName(env.getRequiredProperty(PROPERTY_NAME_DATABASE_DRIVER));
-        women.setUrl(env.getRequiredProperty(PROPERTY_NAME_WOMEN_DATABASE_URL));
-        
+        women.setDriverClassName("net.ucanaccess.jdbc.UcanaccessDriver");
+        women.setUrl("jdbc:ucanaccess://C:/Sports/CricketWomen/Database/CricketTeams.mdb");
+
         Map<Object, Object> targetDataSources = new HashMap<>();
         targetDataSources.put("LOCAL", dataSource);
         targetDataSources.put("MEN", men);
@@ -53,18 +46,19 @@ public class DataSourceConfig {
         RoutingDataSource routingDataSource = new RoutingDataSource();
         routingDataSource.setTargetDataSources(targetDataSources);
         routingDataSource.setDefaultTargetDataSource(dataSource);
+        routingDataSource.afterPropertiesSet();
 
         return routingDataSource;
     }
 
     @Bean
     public LocalSessionFactoryBean sessionFactory() {
-        if (sessionFactory == null) {
-        	sessionFactory = new LocalSessionFactoryBean();
-            sessionFactory.setDataSource(dataSource());
-            sessionFactory.setPackagesToScan("com.cricket.model");
-            sessionFactory.setHibernateProperties(hibernateProperties());
-        }
+
+        LocalSessionFactoryBean sessionFactory = new LocalSessionFactoryBean();
+        sessionFactory.setDataSource(dataSource());
+        sessionFactory.setPackagesToScan("com.cricket.model");
+        sessionFactory.setHibernateProperties(hibernateProperties());
+
         return sessionFactory;
     }
 

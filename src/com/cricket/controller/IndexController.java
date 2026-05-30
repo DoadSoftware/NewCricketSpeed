@@ -59,9 +59,9 @@ public class IndexController
 		} else {
 			session_configuration = new Configuration();
 			JAXBContext.newInstance(Configuration.class).createMarshaller().marshal(session_configuration, 
-				new File(basePath+ CricketUtil.CONFIGURATIONS_DIRECTORY + CricketUtil.SPEED_XML));
+				new File(CricketUtil.CRICKET_DIRECTORY+ CricketUtil.CONFIGURATIONS_DIRECTORY + CricketUtil.SPEED_XML));
 		}
-		model.addAttribute("match_files", new File(basePath + CricketUtil.MATCHES_DIRECTORY).listFiles(new FileFilter() {
+		model.addAttribute("match_files", new File(CricketUtil.CRICKET_DIRECTORY + CricketUtil.MATCHES_DIRECTORY).listFiles(new FileFilter() {
 			@Override
 		    public boolean accept(File pathname) {
 		        String name = pathname.getName().toLowerCase();
